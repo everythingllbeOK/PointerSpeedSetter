@@ -75,7 +75,6 @@ Func MakeGUI()
  
   GUISetState(@SW_SHOW,$idGUI)
 
-  Local $idMsg
   Local $lastSpeed = $Speed
   Local $lastAccel = $Accel[2]
 
@@ -114,13 +113,11 @@ Func MakeGUI()
       $lastAccel = $Accel[2]
     EndIf
 
-    ;read button command 
-    $idMsg = GUIGetMsg()
-    Select
-      Case $idMsg = $GUI_EVENT_CLOSE
+    Switch GUIGetMsg()
+      Case $GUI_EVENT_CLOSE
         Exit
 
-      Case $idMsg = $idStart
+      Case $idStart
         if ( _StringIsNumber(GuiCtrlRead($sThresh1)) + _StringIsNumber(GuiCtrlRead($sThresh2)) ) == 2 Then
             $Accel[0] = _GetNumberFromString(GuiCtrlRead($sThresh1))
             $Accel[1] = _GetNumberFromString(GuiCtrlRead($sThresh2))
@@ -162,7 +159,7 @@ Func MakeGUI()
           MsgBox(0, "Error", "Must be a number")
         EndIf
 
-      Case $idMsg = $idCustomize
+      Case $idCustomize
         AutoItSetOption ( "GUICoordMode", 0 )
         $idGUICustomize = GUICreate("Customize Windows Accel Curve", 513, 242)
         AutoItSetOption ( "GUICoordMode", 1 )
@@ -175,9 +172,9 @@ Func MakeGUI()
         GUISetState(@SW_RESTORE,$idGUI)
         GUIDelete(              $idGUICustomize)
 
-      Case $idMsg = $idInfo
+      Case $idInfo
         MsgBox(0,"About",$appletVersion)
-    EndSelect
+    EndSwitch
   WEnd
 EndFunc
 
@@ -188,7 +185,7 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
   Local Const $AccelCurveYdefaultW10 = ["1.0702667236328125", "4.140625"          , "18.984375"          , "443.75"]
   Local Const $AccelCurveXprime      = [16,   32,  48,  64]
   Local Const $AccelCurveYprime      = [56,  112, 168, 224]
-  Local $AccelCurveX[4], $AccelCurveY[4], $idX[4], $idY[4], $lastAccelCurveX[4], $lastAccelCurveY[4], $percent
+  Local $AccelCurveX[4], $AccelCurveY[4], $idX[4], $idY[4], $percent
   Local $dpi = 96
   Local $nominalHz = 120
   Local $PointsToDraw = 4
@@ -204,8 +201,6 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
     $line = $i + 1
     $AccelCurveX[$i] = SmoothMouseBinaryToFloat($regCurveX, $line)
     $AccelCurveY[$i] = SmoothMouseBinaryToFloat($regCurveY, $line)
-    $lastAccelCurveX[$i] = $AccelCurveX[$i]
-    $lastAccelCurveY[$i] = $AccelCurveY[$i]
   Next
 
   ; start drawing the GUI
@@ -251,61 +246,37 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
   Local $idMsg
   Local $run = 1
   While $run
-
-    if     GUICtrlRead($idWin10) == $GUI_CHECKED then
-      $nominalHz = 120
-    elseif GUICtrlRead($idWin7)  == $GUI_CHECKED then
-      $nominalHz = 150
-    endif
-
+  
     $percent = GUICtrlRead($idDPI) * 25 + 100
-
     If $dpi*100/96 - $percent Then
       $dpi = $percent * 96 / 100
       GUICtrlSetData($idScaling,$percent&"% ("&$dpi&" dpi)")
-    EndIf
-
-
-    ; live update of interface
-    $idMsg = 0
-        For $i = 0 to 3 step 1
-          $AccelCurveX[$i] = GUICtrlRead($idX[$i])
-          $AccelCurveY[$i] = GUICtrlRead($idY[$i])
-          If  $lastAccelCurveX[$i] - $AccelCurveX[$i] or $lastAccelCurveY[$i] - $AccelCurveY[$i] Then
-              $lastAccelCurveX[$i] = $AccelCurveX[$i]
-              $lastAccelCurveY[$i] = $AccelCurveY[$i]
-              $idMsg = 1
-              GUICtrlSetState($idApply,$GUI_ENABLE)
-          EndIf      
-        Next
-        If $lastDPI - $dpi or $lastNominalHz - $nominalHz Then
-           $lastDPI = $dpi
-          if  $lastNominalHz - $nominalHz then
-              $lastNominalHz = $nominalHz
-              $idMsg = 2
-          else
-              $idMsg = 1
-          endif
-        EndIf
-        If $idMsg Then
-          DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
-          if $idMsg == 2 then
-            if     $nominalHz == 120 then
-              GUICtrlSetData($idDefault,"Default Curve (Win10)")
-            elseif $nominalHz == 150 then
-              GUICtrlSetData($idDefault,"Default Curve (Win7)")
-            endif
-          endif
-        EndIf
-
-
-    ; actions based on button trigger
-    $idMsg = GUIGetMsg()
-    Select
-      Case $idMsg == $GUI_EVENT_CLOSE
+    EndIf  
+  
+    Switch GUIGetMsg()
+      Case $GUI_EVENT_CLOSE
         $run = 0
+        
+      Case $idDPI, $idWin10, $idWin7
+        if     GUICtrlRead($idWin10) == $GUI_CHECKED then
+          $nominalHz = 120
+          GUICtrlSetData($idDefault,"Default Curve (Win10)")
+        elseif GUICtrlRead($idWin7)  == $GUI_CHECKED then
+          $nominalHz = 150
+          GUICtrlSetData($idDefault,"Default Curve (Win7)")
+        endif
+        DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
+        
+      Case $idX[0],$idX[1],$idX[2],$idX[3], $idY[0],$idY[1],$idY[2],$idY[3]
+            For $i = 0 to 3 step 1
+              $AccelCurveX[$i] = GUICtrlRead($idX[$i])
+              $AccelCurveY[$i] = GUICtrlRead($idY[$i])
+            Next
+            DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
+            GUICtrlSetState($idApply,$GUI_ENABLE)
 
-      Case $idMsg == $idHelp
+
+      Case $idHelp
         MsgBox( -1, "Help", "The grey line on the plot indicates the identity line (along which your mouse input to pixel movement is 1-to-1.)" _
          & @crlf _
          & @crlf _
@@ -332,19 +303,19 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
          & @crlf _
          & "Important notice: Windows Precision Trackpad uses the Accel curve here regardless of whether Enhance Pointer Precision is enabled or not. This means that changing the curve here, even if you're not using the accel with your mouse, will affect how the trackpad feels if it's using the Precision driver.") 
 
-      Case $idMsg == $idZoomIn
+      Case $idZoomIn
         if $PointsToDraw > 1 then
           $PointsToDraw -= 1
           DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
         endif
 
-      Case $idMsg == $idZoomOut
+      Case $idZoomOut
         if $PointsToDraw < 4 then
           $PointsToDraw += 1    
           DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
         endif
 
-      Case $idMsg == $idGraphMode
+      Case $idGraphMode
         Switch $graphMode
           Case 1
             $graphMode = 2
@@ -358,16 +329,18 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
         EndSwitch
         DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
 
-      Case $idMsg == $idLinearize
+      Case $idLinearize
         for $i = 0 to 3 step 1
           $AccelCurveY[$i] = $AccelCurveYprime[$i]
           $AccelCurveX[$i] = int($dpi * 65536 / $nominalHz ) * $AccelCurveYprime[$i] / 65536 / 3.5
           GUICtrlSetData($idX[$i],$AccelCurveX[$i])
           GUICtrlSetData($idY[$i],$AccelCurveY[$i])
         next
+        DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
+        GUICtrlSetState($idApply,$GUI_ENABLE)
         ; future complete implementation should be SomeFunctionName($AccelCurveY,$AccelCurveX) byref in the loop then setdata
 
-      Case $idMsg == $idDefault
+      Case $idDefault
         for $i = 0 to 3 step 1
           $AccelCurveX[$i] = $AccelCurveXdefault[$i]
           if $nominalHz == 120 then
@@ -378,8 +351,10 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
           GUICtrlSetData($idX[$i],$AccelCurveX[$i])
           GUICtrlSetData($idY[$i],$AccelCurveY[$i])
         next
+        DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
+        GUICtrlSetState($idApply,$GUI_ENABLE)
 
-      Case $idMsg == $idApply
+      Case $idApply
         $regCurveX = BinaryMid(0,1,4) + BinaryMid(0,1,4)
         $regCurveY = BinaryMid(0,1,4) + BinaryMid(0,1,4)
 
@@ -427,7 +402,7 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
           MsgBox(0,"Error","Must be a number")
         EndIf
 
-    EndSelect
+    EndSwitch
 
   WEnd
 EndFunc 
