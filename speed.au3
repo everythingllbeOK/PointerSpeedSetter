@@ -74,31 +74,30 @@ Func MakeGUI()
   EndIf
  
   GUISetState(@SW_SHOW,$idGUI)
-
-  Local $lastSpeed = $Speed
-  Local $lastAccel = $Accel[2]
-
   While 1
-
-    ;live read of speed and accel
-    $Speed = GUICtrlRead($testSlider)
-    if $Speed == 0 Then
-      $Speed = 1
-      GUICtrlSetData($testSlider, $Speed)
-    EndIf
-    if     GUICtrlRead($idRadio0) == $GUI_CHECKED Then
-      $Accel[2] = 0
-    ElseIf GUICtrlRead($idRadio1) == $GUI_CHECKED Then
-      $Accel[2] = 1
-    ElseIf GUICtrlRead($idRadio2) == $GUI_CHECKED Then
-      $Accel[2] = 2
+    if $Speed - GUICtrlRead($testSlider) Then
+       $Speed = GUICtrlRead($testSlider)
+       If $Speed == 0 Then
+          $Speed = 1
+          GUICtrlSetData($testSlider, $Speed)
+       EndIf
+       CalculateMultiplier()
+       GUICtrlSetData($sMultiplier,$multiplier)
     EndIf
 
-    ;live update based on change
-    if ($Speed == $lastSpeed) And ($Accel[2] == $lastAccel) Then
-    Else
-      CalculateMultiplier()
-      if $Accel[2] <> $lastAccel Then
+    Switch  GUIGetMsg()
+      Case $GUI_EVENT_CLOSE
+        Exit
+      
+      Case $idRadio0, $idRadio1, $idRadio2
+        if     GUICtrlRead($idRadio0) == $GUI_CHECKED Then
+          $Accel[2] = 0
+        ElseIf GUICtrlRead($idRadio1) == $GUI_CHECKED Then
+          $Accel[2] = 1
+        ElseIf GUICtrlRead($idRadio2) == $GUI_CHECKED Then
+          $Accel[2] = 2
+        EndIf
+        CalculateMultiplier()
         GUICtrlSetData($sMode,$mode)
         if $Accel[2] Then
           GUICtrlSetData($sThresh1, 6)
@@ -107,15 +106,6 @@ Func MakeGUI()
           GUICtrlSetData($sThresh1, 0)
           GUICtrlSetData($sThresh2, 0)
         EndIf
-      EndIf
-      GUICtrlSetData($sMultiplier,$multiplier)
-      $lastSpeed = $Speed
-      $lastAccel = $Accel[2]
-    EndIf
-
-    Switch GUIGetMsg()
-      Case $GUI_EVENT_CLOSE
-        Exit
 
       Case $idStart
         if ( _StringIsNumber(GuiCtrlRead($sThresh1)) + _StringIsNumber(GuiCtrlRead($sThresh2)) ) == 2 Then
@@ -190,8 +180,6 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
   Local $nominalHz = 120
   Local $PointsToDraw = 4
   Local $graphMode = 1
-  Local $lastDPI = $dpi
-  Local $lastNominalHz = $nominalHz
 
   ; initializing variables
   Local $regCurveX = RegRead("HKEY_CURRENT_USER\Control Panel\Mouse","SmoothMouseXCurve")
@@ -240,22 +228,17 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
   DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY) 
   Local $idZoomOut      = GUICtrlCreateButton("+",$windowWidth-$margin-201   ,$margin+3    ,15,15,$BS_CENTER)
   Local $idZoomIn       = GUICtrlCreateButton("-",$windowWidth-$margin-201   ,$margin+17   ,15,15,$BS_CENTER)
-  Local $idGraphMode    = GUICtrlCreateButton("pixel",$graphPosX-28-8,$graphPosY+90,28,20,$BS_RIGHT) 
-
-  ; loop until user exits
-  Local $idMsg
-  Local $run = 1
-  While $run
-  
+  Local $idGraphMode    = GUICtrlCreateButton("pixel",$graphPosX-28-8,$graphPosY+90,33,20,$BS_CENTER) 
+  Local $idValid
+  While 1
     $percent = GUICtrlRead($idDPI) * 25 + 100
     If $dpi*100/96 - $percent Then
-      $dpi = $percent * 96 / 100
-      GUICtrlSetData($idScaling,$percent&"% ("&$dpi&" dpi)")
+       $dpi = $percent * 96 / 100
+       GUICtrlSetData($idScaling,$percent&"% ("&$dpi&" dpi)")
     EndIf  
-  
-    Switch GUIGetMsg()
+    Switch  GUIGetMsg()
       Case $GUI_EVENT_CLOSE
-        $run = 0
+        exitloop
         
       Case $idDPI, $idWin10, $idWin7
         if     GUICtrlRead($idWin10) == $GUI_CHECKED then
@@ -268,40 +251,12 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
         DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
         
       Case $idX[0],$idX[1],$idX[2],$idX[3], $idY[0],$idY[1],$idY[2],$idY[3]
-            For $i = 0 to 3 step 1
-              $AccelCurveX[$i] = GUICtrlRead($idX[$i])
-              $AccelCurveY[$i] = GUICtrlRead($idY[$i])
-            Next
-            DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
-            GUICtrlSetState($idApply,$GUI_ENABLE)
-
-
-      Case $idHelp
-        MsgBox( -1, "Help", "The grey line on the plot indicates the identity line (along which your mouse input to pixel movement is 1-to-1.)" _
-         & @crlf _
-         & @crlf _
-         & "Nominal mouse/pointer speeds are in units of IPS (inches per second) where Microsoft assumes a 400 CPI @ 125 Hz mouse is being used on a certain DPI monitor. In actuality, only the raw counts are considered when the acceleration algorithm is applied." _
-         & @crlf _
-         & @crlf _
-         & "MarkC's fix essentially modifies (linearizes) the Windows mouse accel function such that it inverts the calculations in the mouse accel algorithm and compensates for binary truncation errors (hence the messy decimals), resulting in unmodified pointer counts." _
-         & @crlf _
-         & @crlf _
-         & "The appropriate MarkC fix applied depends on your display scaling due to the aforementioned truncation error, as well as your Windows Version due to Microsoft changing the algorithm going from Win7 to Win8 & onwards." _
-         & @crlf _
-         & @crlf _
-         & "Technically, if you have your pointer speed slider set to anything other than the central notch (5/10 in Control Panel), the truncation compensation would need to be be different once again. The fix applied here assumes that you're leaving it at the centre notch." _
-         & @crlf _
-         & @crlf _
-         & "For a more complete customization feature set, check out MarkC's Fix Builder which lets you do things like using the accel algorithm to set arbitrary pointer multiplier to downscale your effective cursor CPI on the desktop only, instead of using Povohat's driver which affects raw input programs too. Povohat's driver is still pretty kick-ass though, I highly recommend checking that out too." _
-         & @crlf _
-         & @crlf _
-         & "Trivia: the Pointer Options Control Panel applet is physically located at C:\WINDOWS\System32\main.cpl, which includes both the Mouse settings applet as well as the key repeat applet." _
-         & @crlf _
-         & @crlf _
-         & "Check out FilterKeysSetter for natively making your key repeat/delay more responsive. I personally use a delay of 150ms whereas Windows doesn't typically let you go below 250ms even at the lowest setting in the Control Panel applet." _
-         & @crlf _
-         & @crlf _
-         & "Important notice: Windows Precision Trackpad uses the Accel curve here regardless of whether Enhance Pointer Precision is enabled or not. This means that changing the curve here, even if you're not using the accel with your mouse, will affect how the trackpad feels if it's using the Precision driver.") 
+        For $i = 0 to 3 step 1
+          $AccelCurveX[$i] = GUICtrlRead($idX[$i])
+          $AccelCurveY[$i] = GUICtrlRead($idY[$i])
+        Next
+        DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
+        GUICtrlSetState($idApply,$GUI_ENABLE)
 
       Case $idZoomIn
         if $PointsToDraw > 1 then
@@ -342,8 +297,8 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
 
       Case $idDefault
         for $i = 0 to 3 step 1
-          $AccelCurveX[$i] = $AccelCurveXdefault[$i]
-          if $nominalHz == 120 then
+            $AccelCurveX[$i] = $AccelCurveXdefault[$i]
+          if     $nominalHz == 120 then
             $AccelCurveY[$i] = $AccelCurveYdefaultW10[$i]
           elseif $nominalHz == 150 then
             $AccelCurveY[$i] = $AccelCurveYdefaultW7[$i]
@@ -357,53 +312,52 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
       Case $idApply
         $regCurveX = BinaryMid(0,1,4) + BinaryMid(0,1,4)
         $regCurveY = BinaryMid(0,1,4) + BinaryMid(0,1,4)
-
-        for $i = 0 to 3 step 1
+        $idValid   = 1
+        For $i = 0 to 3 step 1
           $AccelCurveX[$i] = GUICtrlRead($idX[$i])
           $AccelCurveY[$i] = GUICtrlRead($idY[$i])
-
           If ( _StringIsNumber($AccelCurveX[$i]) + _StringIsNumber($AccelCurveY[$i]) + IsNumber($AccelCurveX[$i]) + IsNumber($AccelCurveY[$i]) ) == 2 Then
             $regCurveX += CoordinateToSmoothMouseBinary( number( $AccelCurveX[$i] ) )
             $regCurveY += CoordinateToSmoothMouseBinary( number( $AccelCurveY[$i] ) )
-
           Else
-            $idMsg = 0
-
+            $idValid = 0
           EndIf
         Next
-
-        if $idMsg == $idApply then
+        if $idValid then
           RegWrite("HKEY_CURRENT_USER\Control Panel\Mouse", "SmoothMouseXCurve", "REG_BINARY", $regCurveX)
           RegWrite("HKEY_CURRENT_USER\Control Panel\Mouse", "SmoothMouseYCurve", "REG_BINARY", $regCurveY)
           $regCurveX = RegRead("HKEY_CURRENT_USER\Control Panel\Mouse", "SmoothMouseXCurve")
           $regCurveY = RegRead("HKEY_CURRENT_USER\Control Panel\Mouse", "SmoothMouseYCurve")
-
           For $i = 0 to 3 Step 1
             $line = $i + 1
-
             if SmoothMouseBinaryToFloat($regCurveX, $line) - Number($AccelCurveX[$i]) then
               $AccelCurveX[$i] = SmoothMouseBinaryToFloat($regCurveX, $line)
               GUICtrlSetData($idX[$i], $AccelCurveX[$i])
             EndIf
-
             if SmoothMouseBinaryToFloat($regCurveY, $line) - Number($AccelCurveY[$i]) then
               $AccelCurveY[$i] = SmoothMouseBinaryToFloat($regCurveY, $line)
               GUICtrlSetData($idY[$i], $AccelCurveY[$i]) 
             EndIf
-
           Next   
-
           MsgBox(0,"Success","Successfully written the following data to the Registry:" & @crlf & @crlf & "HKCU\Control Panel\Mouse\SmoothMouseXCurve: " & $regCurveX & @crlf & @crlf & "HKCU\Control Panel\Mouse\SmoothMouseYCurve: " & $regCurveY & @crlf & @crlf & "Customization will take effect on next logon.")
           GUICtrlSetState($idApply,$GUI_DISABLE)
-
         Else
           $regCurveX = RegRead("HKEY_CURRENT_USER\Control Panel\Mouse", "SmoothMouseXCurve")
           $regCurveY = RegRead("HKEY_CURRENT_USER\Control Panel\Mouse", "SmoothMouseYCurve")
           MsgBox(0,"Error","Must be a number")
         EndIf
 
+      Case $idHelp
+        MsgBox( -1, "Help", "The grey line on the plot indicates the identity line (along which your mouse input to pixel movement is 1-to-1.)" _
+         & @crlf & @crlf  & "Nominal mouse/pointer speeds are in units of IPS (inches per second) where Microsoft assumes a 400 CPI @ 125 Hz mouse is being used on a certain DPI monitor. In actuality, only the raw counts are considered when the acceleration algorithm is applied." _
+         & @crlf & @crlf  & "MarkC's fix essentially modifies (linearizes) the Windows mouse accel function such that it inverts the calculations in the mouse accel algorithm and compensates for binary truncation errors (hence the messy decimals), resulting in unmodified pointer counts." _
+         & @crlf & @crlf  & "The appropriate MarkC fix applied depends on your display scaling due to the aforementioned truncation error, as well as your Windows Version due to Microsoft changing the algorithm going from Win7 to Win8 & onwards." _
+         & @crlf & @crlf  & "Technically, if you have your pointer speed slider set to anything other than the central notch (5/10 in Control Panel), the truncation compensation would need to be be different once again. The fix applied here assumes that you're leaving it at the centre notch." _
+         & @crlf & @crlf  & "For a more complete customization feature set, check out MarkC's Fix Builder which lets you do things like using the accel algorithm to set arbitrary pointer multiplier to downscale your effective cursor CPI on the desktop only, instead of using Povohat's driver which affects raw input programs too. Povohat's driver is still pretty kick-ass though, I highly recommend checking that out too." _
+         & @crlf & @crlf  & "Trivia: the Pointer Options Control Panel applet is physically located at C:\WINDOWS\System32\main.cpl, which includes both the Mouse settings applet as well as the key repeat applet." _
+         & @crlf & @crlf  & "Check out FilterKeysSetter for natively making your key repeat/delay more responsive. I personally use a delay of 150ms whereas Windows doesn't typically let you go below 250ms even at the lowest setting in the Control Panel applet." _
+         & @crlf & @crlf  & "Important notice: Windows Precision Trackpad uses the Accel curve here regardless of whether Enhance Pointer Precision is enabled or not. This means that changing the curve here, even if you're not using the accel with your mouse, will affect how the trackpad feels if it's using the Precision driver.") 
     EndSwitch
-
   WEnd
 EndFunc 
 
