@@ -99,11 +99,8 @@ Func MakeGUI()
     if ($Speed == $lastSpeed) And ($Accel[2] == $lastAccel) Then
     Else
       CalculateMultiplier()
-      if $Accel[2] == $lastAccel Then
-      Else
-        GUICtrlDelete($sMode)
-        $sMode = GUICtrlCreateLabel($mode, $margin, $modeYcoord)
-                 GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
+      if $Accel[2] <> $lastAccel Then
+        GUICtrlSetData($sMode,$mode)
         if $Accel[2] Then
           GUICtrlSetData($sThresh1, 6)
           GUICtrlSetData($sThresh2, 10)
@@ -304,11 +301,10 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
         If $idMsg Then
           DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
           if $idMsg == 2 then
-             GUICtrlDelete($idDefault)
             if     $nominalHz == 120 then
-              $idDefault = GUICtrlCreateButton("Default Curve (Win10)", $margin+$inputWidth, $margin+160, $inputWidth, 25)
+              GUICtrlSetData($idDefault,"Default Curve (Win10)")
             elseif $nominalHz == 150 then
-              $idDefault = GUICtrlCreateButton("Default Curve (Win7)" , $margin+$inputWidth, $margin+160, $inputWidth, 25)
+              GUICtrlSetData($idDefault,"Default Curve (Win7)")
             endif
           endif
         EndIf
