@@ -41,7 +41,7 @@ Func MakeGUI()
   Local $idGUI       = GUICreate("Pointer Speed Setter", $mainWidth   , $mainHeight)
   Local $sMode       = GUICtrlCreateLabel($mode                 , $margin      , $modeYcoord)
                        GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
-  Local $sMultiplier = GUICtrlCreateLabel($multiplier           , $modeXcoord  , $modeYcoord)
+  Local $sMultiplier = GUICtrlCreateLabel($multiplier           , $modeXcoord  , $modeYcoord, 26)
                        GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
                        
   Local $idInfo      = GUICtrlCreateButton("i"         , 0            , 0                     ,  10, 12, $BS_RIGHT)
@@ -109,9 +109,7 @@ Func MakeGUI()
           GUICtrlSetData($sThresh2, 0)
         EndIf
       EndIf
-      GUICtrlDelete($sMultiplier)
-      $sMultiplier = GUICtrlCreateLabel($multiplier, $modeXcoord, $modeYcoord)
-                     GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
+      GUICtrlSetData($sMultiplier,$multiplier)
       $lastSpeed = $Speed
       $lastAccel = $Accel[2]
     EndIf
@@ -146,18 +144,11 @@ Func MakeGUI()
           SetMouseSpeed()
           SetMouseAccel()
           CalculateMultiplier()
-
-          ;refresh the labels
-          GUICtrlDelete($sMode)
-          GUICtrlDelete($sMultiplier)
-          $sMode       = GUICtrlCreateLabel($mode      , $margin    , $modeYcoord)
-                         GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
-          $sMultiplier = GUICtrlCreateLabel($multiplier, $modeXcoord, $modeYcoord)
-                         GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
-
-          GUICtrlSetData($testSlider, $Speed)
-          GUICtrlSetData($sThresh1  , $Accel[0])
-          GUICtrlSetData($sThresh2  , $Accel[1])
+          GUICtrlSetData($sMode      ,$mode)
+          GUICtrlSetData($sMultiplier,$multiplier)
+          GUICtrlSetData($testSlider ,$Speed)
+          GUICtrlSetData($sThresh1   ,$Accel[0])
+          GUICtrlSetData($sThresh2   ,$Accel[1])
             if $Accel[2] Then
               if     $Accel[2] == 2 Then
                 GUICtrlSetState($idRadio2, $GUI_CHECKED)
@@ -271,9 +262,7 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
 
     If $dpi*100/96 - $percent Then
       $dpi = $percent * 96 / 100
-      GUICtrlDelete($idScaling)
-      $idScaling = GUICtrlCreateLabel($percent&"% ("&$dpi&" dpi)",$margin,$margin+120,$inputWidth,-1,$SS_CENTER)
-      GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
+      GUICtrlSetData($idScaling,$percent&"% ("&$dpi&" dpi)")
     EndIf
 
 
@@ -359,16 +348,13 @@ Func CustomizeAccel(ByRef $idGUICustomize, $windowWidth, $windowHeight)
         Switch $graphMode
           Case 1
             $graphMode = 2
-            GUICtrlDelete($idGraphMode)
-            $idGraphMode = GUICtrlCreateButton("gain" ,$graphPosX-28-8,$graphPosY+90,28,20,$BS_RIGHT) 
+            GUICtrlSetData($idGraphMode,"gain") 
           Case 2
             $graphMode = 3
-            GUICtrlDelete($idGraphMode)
-            $idGraphMode = GUICtrlCreateButton("scale",$graphPosX-32-8,$graphPosY+90,32,20,$BS_RIGHT) 
+            GUICtrlSetData($idGraphMode,"scale") 
           Case 3
             $graphMode = 1
-            GUICtrlDelete($idGraphMode)
-            $idGraphMode = GUICtrlCreateButton("pixel",$graphPosX-28-8,$graphPosY+90,28,20,$BS_RIGHT) 
+            GUICtrlSetData($idGraphMode,"pixel") 
         EndSwitch
         DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $nominalHz, $PointsToDraw, $graphElements, $graphPosX, $graphPosY)
 
