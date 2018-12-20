@@ -70,15 +70,17 @@ Func MakeGUI()
   HotKeySet( IniRead("hotkey.ini","Hotkeys","DisableAccel" ,"!{\}") , "DisableAccel"  )
  
   Local $lastSliderSpeed=GUICtrlRead($lSlider)
+  Local $lastAccelRadio=AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
+  Local $idMsg
   GUISetState(@SW_SHOW,$idGUI)
   While 1
     Sleep(10)
        $gCycle+=1
-    If $gCycle>=10 Then       
+    If $gCycle>=50 Then       
        $gCycle=0
        GetMouseSpeed()
        GetMouseAccel()
-       If (GUICtrlRead($lSlider) <> $Speed)+(AccessAccelRadio($idRadio0,$idRadio1,$idRadio2) <> $Accel[2]) Then
+       If (GUICtrlRead($lSlider) <> $Speed)+($lastAccelRadio <> $Accel[2]) Then
           If $gPoll Then
             GUICtrlSetData($sMode,CalculateMultiplier())
             GUICtrlSetData($sThresh1   ,$Accel[0])
@@ -100,32 +102,35 @@ Func MakeGUI()
        $gPoll=0
     EndIf
 
-    Switch  GUIGetMsg()
+    $idMsg = GUIGetMsg()
+    Switch $idMsg
       Case $GUI_EVENT_CLOSE
         Exit
-        
-      Case $lSlider
+      
+      Case $lSlider, $idRadio0, $idRadio1, $idRadio2, $sThresh1, $sThresh2
+           $gPoll    = 0
+        If ($idMsg=$idRadio0) OR ($idMsg=$idRadio1) OR ($idMsg=$idRadio2) Then
+           $lastAccelRadio = AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
+           GUICtrlSetData($sMode,CalculateMultiplier(GUICtrlRead($lSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)))
+           If $lastAccelRadio Then
+             GUICtrlSetData($sThresh1, 6)
+             GUICtrlSetData($sThresh2, 10)
+           Else
+             GUICtrlSetData($sThresh1, 0)
+             GUICtrlSetData($sThresh2, 0)
+           EndIf
+        EndIf
         GetMouseSpeed()
         GetMouseAccel()
-        If (GUICtrlRead($lSlider) <> $Speed)+(AccessAccelRadio($idRadio0,$idRadio1,$idRadio2) <> $Accel[2]) Then
+        If   (                          GUICtrlRead($lSlider)<>$Speed   ) _
+          +  (AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)<>$Accel[2]) _
+          +  (   _GetNumberFromString(GuiCtrlRead($sThresh2))<>$Accel[1]) _
+          +  (   _GetNumberFromString(GuiCtrlRead($sThresh1))<>$Accel[0]) Then
           GUICtrlSetState($idApply,$GUI_ENABLE)
         Else
           GUICtrlSetState($idApply,$GUI_DISABLE)
           $gPoll=1
         EndIf
-      
-      Case $idRadio0, $idRadio1, $idRadio2
-        $gPoll    = 0
-        $Accel[2] = AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
-        GUICtrlSetData($sMode,CalculateMultiplier(GUICtrlRead($lSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)))
-        if $Accel[2] Then
-          GUICtrlSetData($sThresh1, 6)
-          GUICtrlSetData($sThresh2, 10)
-        Else
-          GUICtrlSetData($sThresh1, 0)
-          GUICtrlSetData($sThresh2, 0)
-        EndIf
-        GUICtrlSetState($idApply,$GUI_ENABLE)
 
       Case $idApply
         if ( _StringIsNumber(GuiCtrlRead($sThresh1)) + _StringIsNumber(GuiCtrlRead($sThresh2)) ) == 2 Then
