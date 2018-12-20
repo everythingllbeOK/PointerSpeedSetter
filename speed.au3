@@ -74,7 +74,7 @@ Func MakeGUI()
   While 1
     Sleep(10)
        $gCycle+=1
-    If $gCycle>=50 Then       
+    If $gCycle>=10 Then       
        $gCycle=0
        GetMouseSpeed()
        GetMouseAccel()
@@ -516,7 +516,6 @@ Func DrawMousePlot($graphMode, $AccelCurveX, $AccelCurveY, $dpi, $win, $PointsTo
   DllStructSetData($graphElements, "idYlabel", $idYlabel)
 EndFunc
 
-
 Func MakeMouseSpeedSlider($inputX, $inputY)
    Local Const $tickCoordY = $inputY+10
    Local Const $numbCoordY = $inputY+23
@@ -582,58 +581,42 @@ Func EnableAccel()
 EndFunc
 
 Func GetMouseSpeed()
-
-        Local $Action = 0x0070
-        
+        Local $Action = 0x0070      
     DllCall("user32.dll", "none", "SystemParametersInfo", _
             "uint",  $Action, _
             "uint",  0, _
              "ptr",  DllStructGetPtr($pSpeed), _
             "uint",  0)
     $Speed = DllStructGetData($pSpeed, "speed")
-
 EndFunc
 
-
 Func GetMouseAccel()
-
         Local $Action = 0x0003
-
     DllCall("user32.dll", "none", "SystemParametersInfo", _
             "uint",  $Action, _
             "uint",  0, _
              "ptr",  DllStructGetPtr($pAccel), _
             "uint",  0)
-
     $Accel[0] = DllStructGetData($pAccel, "thresh1")
     $Accel[1] = DllStructGetData($pAccel, "thresh2")
     $Accel[2] = DllStructGetData($pAccel, "accel")
-
 EndFunc
 
- 
 Func SetMouseSpeed()
-
         Local $Action = 0x0071
-
     DllCall("user32.dll", "none", "SystemParametersInfo", _
             "uint",  $Action, _
             "uint",  0, _
             "uint",  $Speed, _
             "uint",  0)
     RegWrite("HKEY_CURRENT_USER\Control Panel\Mouse", "MouseSensitivity", "REG_SZ", string($Speed))
-
 EndFunc
 
-
 Func SetMouseAccel()
-
         Local $Action = 0x0004
-
     DllStructSetData($pAccel, "thresh1", $Accel[0])
     DllStructSetData($pAccel, "thresh2", $Accel[1])
     DllStructSetData($pAccel, "accel",   $Accel[2])
-
     DllCall("user32.dll", "none", "SystemParametersInfo", _
             "uint",  $Action, _
             "uint",  0, _
@@ -642,11 +625,7 @@ Func SetMouseAccel()
     RegWrite("HKEY_CURRENT_USER\Control Panel\Mouse", "MouseThreshold1", "REG_SZ", string($Accel[0]))
     RegWrite("HKEY_CURRENT_USER\Control Panel\Mouse", "MouseThreshold2", "REG_SZ", string($Accel[1]))
     RegWrite("HKEY_CURRENT_USER\Control Panel\Mouse", "MouseSpeed"     , "REG_SZ", string($Accel[2]))
-
 EndFunc
-
-
-
 
 Func SmoothMouseBinaryToFloat($input,$line)
   Local $float
@@ -656,7 +635,6 @@ Func SmoothMouseBinaryToFloat($input,$line)
   $float += Dec(Hex(BinaryMid($input,($line*8)+4,1))) * 256
   return $float
 EndFunc
-
 
 Func CoordinateToSmoothMouseBinary($input)
   Local $byte1, $byte2, $byte3, $byte4
@@ -695,7 +673,6 @@ Func AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,$accessMode="read")
   Endif
 EndFunc
 
-
 Func CalculateMultiplier($lMouseSpeed=$Speed,$lAccelMode=$Accel[2])
     Local $multiplier = "?"
     Local $mode = "Pointer Speed:"
@@ -723,7 +700,6 @@ Func CalculateMultiplier($lMouseSpeed=$Speed,$lAccelMode=$Accel[2])
     EndIf
     return $mode&" "&$multiplier
 EndFunc
-
  
 Func _StringIsNumber($input) ; Checks if an input string is a number.
 ;   The default StringIsDigit() function doesn't recognize negatives or decimals.
@@ -735,7 +711,6 @@ Func _StringIsNumber($input) ; Checks if an input string is a number.
    EndIf
    Return False
 EndFunc
-
  
 Func _GetNumberFromString($input) ; uses the above regular expression to pull a proper number
 ;   $array = StringRegExp($input, '^[-+]?([0-9]*\.[0-9]+|[0-9]+)$', 3) ; this didn't return negatives
