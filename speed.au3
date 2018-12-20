@@ -13,9 +13,14 @@ Global $Speed = 0xa
 Global $Accel[3]; = [0x0,0x0,0x0]
 Global $multiplier = ""
 Global $mode = "Pointer Speed:"
+Global $gSlider
 Global Const $pSpeed = DllStructCreate("uint speed")
 Global Const $pAccel = DllStructCreate("uint thresh1;uint thresh2;uint accel")
 Global Const $appletVersion  = "v1.0.1.1"
+
+HotKeySet("!{=}","IncrementSens")
+HotKeySet("!{-}","DecrementSens")
+HotKeySet("!{0}","CenterSens")
 
 GetMouseSpeed()
 GetMouseAccel()
@@ -45,10 +50,11 @@ Func MakeGUI()
                        GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
                        
   Local $idInfo      = GUICtrlCreateButton("i"         , 0            , 0                     ,  10, 12, $BS_RIGHT)
-  Local $idStart     = GUICtrlCreateButton("Apply"     , $margin-5    , $mainHeight-20-$margin,  70, 25, $BS_DEFPUSHBUTTON)
+  Local $idApply     = GUICtrlCreateButton("Apply"     , $margin-5    , $mainHeight-20-$margin,  70, 25, $BS_DEFPUSHBUTTON)
+                       GUICtrlSetState($idApply,$GUI_DISABLE)
   Local $idCustomize = GUICtrlCreateButton("Custom..." , $margin+65   , $mainHeight-20-$margin,  70, 25)
 
-  Local $testSlider  = MakeMouseSpeedSlider(             $sliderXcoord, $sliderYcoord)  
+        $gSlider  = MakeMouseSpeedSlider(             $sliderXcoord, $sliderYcoord)  
 
   GUICtrlCreateLabel("Pointer Accel:"                  , $margin      , $margin+60)
   Local $idRadio0    = GUICtrlCreateRadio("Off"        , $margin      , $margin+75            ,  30, 20)
@@ -63,26 +69,46 @@ Func MakeGUI()
 
 
 
-  if $Accel[2] Then
-    if $Accel[2] == 2 Then
-      GUICtrlSetState($idRadio2, $GUI_CHECKED)
-    Else
-      GUICtrlSetState($idRadio1, $GUI_CHECKED)
-    EndIf
-  Else
-    GUICtrlSetState($idRadio0, $GUI_CHECKED)
-  EndIf
+  AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
  
+  Local $lCycle=0
+  Local $lPoll=1
+  Local $lastSliderSpeed=GUICtrlRead($gSlider)
   GUISetState(@SW_SHOW,$idGUI)
   While 1
-    if $Speed - GUICtrlRead($testSlider) Then
-       $Speed = GUICtrlRead($testSlider)
-       If $Speed == 0 Then
-          $Speed = 1
-          GUICtrlSetData($testSlider, $Speed)
+    Sleep(10)
+       $lCycle+=1
+    If $lCycle>=50 Then       
+       $lCycle=0
+       GetMouseSpeed()
+       GetMouseAccel()
+       If (GUICtrlRead($gSlider) <> $Speed)+(AccessAccelRadio($idRadio0,$idRadio1,$idRadio2) <> $Accel[2]) Then
+          If $lPoll Then
+            CalculateMultiplier()
+            GUICtrlSetData($sMode,$mode)
+            GUICtrlSetData($sMultiplier,$multiplier)
+            GUICtrlSetData($sThresh1   ,$Accel[0])
+            GUICtrlSetData($sThresh2   ,$Accel[1])
+            AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
+            GUICtrlSetData($gSlider,$Speed)
+            $lastSliderSpeed = $Speed
+          Else
+            GUICtrlSetState($idApply,$GUI_ENABLE)
+          EndIf
+       Else
+          GUICtrlSetState($idApply,$GUI_DISABLE)
        EndIf
-       CalculateMultiplier()
+    EndIf
+    if $lastSliderSpeed - GUICtrlRead($gSlider) Then
+       $lastSliderSpeed = GUICtrlRead($gSlider)
+       If $lastSliderSpeed == 0 Then
+          $lastSliderSpeed = 1
+          GUICtrlSetData($gSlider, $lastSliderSpeed)
+       EndIf
+       CalculateMultiplier(GUICtrlRead($gSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2))
        GUICtrlSetData($sMultiplier,$multiplier)
+       GUICtrlSetState($idApply,$GUI_ENABLE)
+       $lPoll=0
     EndIf
 
     Switch  GUIGetMsg()
@@ -90,15 +116,11 @@ Func MakeGUI()
         Exit
       
       Case $idRadio0, $idRadio1, $idRadio2
-        if     GUICtrlRead($idRadio0) == $GUI_CHECKED Then
-          $Accel[2] = 0
-        ElseIf GUICtrlRead($idRadio1) == $GUI_CHECKED Then
-          $Accel[2] = 1
-        ElseIf GUICtrlRead($idRadio2) == $GUI_CHECKED Then
-          $Accel[2] = 2
-        EndIf
-        CalculateMultiplier()
+        $lPoll=0
+        $Accel[2] = AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
+        CalculateMultiplier(GUICtrlRead($gSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2))
         GUICtrlSetData($sMode,$mode)
+        GUICtrlSetData($sMultiplier,$multiplier)
         if $Accel[2] Then
           GUICtrlSetData($sThresh1, 6)
           GUICtrlSetData($sThresh2, 10)
@@ -106,24 +128,15 @@ Func MakeGUI()
           GUICtrlSetData($sThresh1, 0)
           GUICtrlSetData($sThresh2, 0)
         EndIf
+        GUICtrlSetState($idApply,$GUI_ENABLE)
 
-      Case $idStart
+      Case $idApply
+        $lPoll=1
         if ( _StringIsNumber(GuiCtrlRead($sThresh1)) + _StringIsNumber(GuiCtrlRead($sThresh2)) ) == 2 Then
-            $Accel[0] = _GetNumberFromString(GuiCtrlRead($sThresh1))
-            $Accel[1] = _GetNumberFromString(GuiCtrlRead($sThresh2))
-          if     GUICtrlRead($idRadio0) == $GUI_CHECKED Then
-            $Accel[2] = 0
-          ElseIf GUICtrlRead($idRadio1) == $GUI_CHECKED Then
-            $Accel[2] = 1
-          ElseIf GUICtrlRead($idRadio2) == $GUI_CHECKED Then
-            $Accel[2] = 2
-          EndIf
-
-          $Speed = GUICtrlRead($testSlider)
-          if  $Speed == 0 Then
-              $Speed =  1
-              GUICtrlSetData($testSlider, $Speed)
-          EndIf
+          $Speed    =  GUICtrlRead($gSlider)
+          $Accel[0] = _GetNumberFromString(GuiCtrlRead($sThresh1))
+          $Accel[1] = _GetNumberFromString(GuiCtrlRead($sThresh2))
+          $Accel[2] =  AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
           SetMouseSpeed()
           SetMouseAccel()
           GetMouseSpeed()
@@ -133,18 +146,11 @@ Func MakeGUI()
           CalculateMultiplier()
           GUICtrlSetData($sMode      ,$mode)
           GUICtrlSetData($sMultiplier,$multiplier)
-          GUICtrlSetData($testSlider ,$Speed)
+          GUICtrlSetData($gSlider ,$Speed)
           GUICtrlSetData($sThresh1   ,$Accel[0])
           GUICtrlSetData($sThresh2   ,$Accel[1])
-            if $Accel[2] Then
-              if     $Accel[2] == 2 Then
-                GUICtrlSetState($idRadio2, $GUI_CHECKED)
-              ElseIf $Accel[2] == 1 Then
-                GUICtrlSetState($idRadio1, $GUI_CHECKED)
-              EndIf
-            Else
-              GUICtrlSetState($idRadio0, $GUI_CHECKED)
-            EndIf
+          AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
+          GUICtrlSetState($idApply,$GUI_DISABLE)
         Else
           MsgBox(0, "Error", "Must be a number")
         EndIf
@@ -538,7 +544,26 @@ Func MakeMouseSpeedSlider($inputX, $inputY)
    Return $pSlider
 EndFunc
 
+Func IncrementSens()
+     GetMouseSpeed()
+  If $Speed < 20 Then
+     $Speed+= 20
+     SetMouseSpeed()
+  EndIf
+EndFunc
 
+Func DecrementSens()
+     GetMouseSpeed()
+  If $Speed > 1 Then
+     $Speed-= 1
+     SetMouseSpeed()
+  EndIf
+EndFunc
+
+Func CenterSens()
+     $Speed=10
+     SetMouseSpeed()
+EndFunc
 
 Func GetMouseSpeed()
 
@@ -633,17 +658,38 @@ Func CoordinateToSmoothMouseBinary($input)
   Return $output
 EndFunc
 
+Func AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,$accessMode="read")
+  If $accessMode = "set" then
+    Switch $Accel[2]
+      Case 2
+        GUICtrlSetState($idRadio2, $GUI_CHECKED)
+      Case 1
+        GUICtrlSetState($idRadio1, $GUI_CHECKED)
+      Case 0
+        GUICtrlSetState($idRadio0, $GUI_CHECKED)
+    EndSwitch
+  Else
+    If      GUICtrlRead($idRadio0)=$GUI_CHECKED Then
+      return 0
+    ElseIf  GUICtrlRead($idRadio1)=$GUI_CHECKED Then
+      return 1
+    ElseIf  GUICtrlRead($idRadio2)=$GUI_CHECKED Then
+      return 2
+    EndIf
+  Endif
+EndFunc
 
-Func CalculateMultiplier()
+
+Func CalculateMultiplier($lMouseSpeed=$Speed,$lAccelMode=$Accel[2])
 
         $multiplier = "?"
         $mode = "Pointer Speed:"
 
-    if $Accel[2] Then
+    if $lAccelMode Then
 
         $mode = "Pointer Acc Multiplier:"
 
-        Switch $Speed
+        Switch $lMouseSpeed
            Case 0 to 1
                  $multiplier = "0.1"
            Case 2
@@ -690,7 +736,7 @@ Func CalculateMultiplier()
 
         $mode = "Pointer Speed Factor:"
 
-        Switch $Speed
+        Switch $lMouseSpeed
            Case 0 to 1
                  $multiplier = "1/32"
            Case 2
