@@ -81,20 +81,20 @@ Func MakeGUI()
        $gCycle+=1
     If $gCycle>=25 Then       
        $gCycle=0
-       GetMouseSpeed()
-       GetMouseAccel()
-       If ($lastSliderSpeed <> $Speed)+($lastAccelRadio <> $Accel[2]) Then
-          If $gPoll Then
-            GUICtrlSetData($sMode,CalculateMultiplier())
-            GUICtrlSetData($sThresh1   ,$Accel[0])
-            GUICtrlSetData($sThresh2   ,$Accel[1])
-            AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
-            GUICtrlSetData($lSlider,$Speed)
-            $lastSliderSpeed = $Speed
-            $lastAccelRadio  = $Accel[2]
-            GUICtrlSetState($idApply,$GUI_DISABLE)
-            GUICtrlSendMsg($sThresh1,$EM_SETREADONLY,NOT($Accel[2]=2),0)
-            GUICtrlSendMsg($sThresh2,$EM_SETREADONLY,NOT($Accel[2]=2),0)
+       If $gPoll Then
+          GetMouseSpeed()
+          GetMouseAccel()
+          If ($lastSliderSpeed <> $Speed)+($lastAccelRadio <> $Accel[2]) Then
+              GUICtrlSetData($sMode,CalculateMultiplier())
+              GUICtrlSetData($sThresh1   ,$Accel[0])
+              GUICtrlSetData($sThresh2   ,$Accel[1])
+              AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
+              GUICtrlSetData($lSlider,$Speed)
+              $lastSliderSpeed = $Speed
+              $lastAccelRadio  = $Accel[2]
+              GUICtrlSetState($idApply,$GUI_DISABLE)
+              GUICtrlSendMsg($sThresh1,$EM_SETREADONLY,NOT($Accel[2]=2),0)
+              GUICtrlSendMsg($sThresh2,$EM_SETREADONLY,NOT($Accel[2]=2),0)
           EndIf
        EndIf
     EndIf
@@ -111,76 +111,75 @@ Func MakeGUI()
     $idMsg = GUIGetMsg()
     Switch $idMsg
       Case $GUI_EVENT_CLOSE
-        Exit
+           Exit
       
       Case $lSlider, $idRadio0, $idRadio1, $idRadio2, $sThresh1, $sThresh2
-           $gPoll    = 0
+           GUICtrlSetState($idApply,$GUI_ENABLE)
+           $gPoll=0
         If ($idMsg=$idRadio0) OR ($idMsg=$idRadio1) OR ($idMsg=$idRadio2) Then
            $lastAccelRadio = AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
            GUICtrlSetData($sMode,CalculateMultiplier(GUICtrlRead($lSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)))
            If $lastAccelRadio Then
-             GUICtrlSetData($sThresh1, 6)
-             GUICtrlSetData($sThresh2, 10)
+              GUICtrlSetData($sThresh1, 6)
+              GUICtrlSetData($sThresh2, 10)
            Else
-             GUICtrlSetData($sThresh1, 0)
-             GUICtrlSetData($sThresh2, 0)
+              GUICtrlSetData($sThresh1, 0)
+              GUICtrlSetData($sThresh2, 0)
            EndIf
            GUICtrlSendMsg($sThresh1,$EM_SETREADONLY,NOT($lastAccelRadio=2),0)
            GUICtrlSendMsg($sThresh2,$EM_SETREADONLY,NOT($lastAccelRadio=2),0)
         EndIf
-        GetMouseSpeed()
-        GetMouseAccel()
-        If   (                          GUICtrlRead($lSlider)<>$Speed   ) _
-          +  (AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)<>$Accel[2]) _
-          +  (   _GetNumberFromString(GuiCtrlRead($sThresh2))<>$Accel[1]) _
-          +  (   _GetNumberFromString(GuiCtrlRead($sThresh1))<>$Accel[0]) Then
-          GUICtrlSetState($idApply,$GUI_ENABLE)
-        Else
-          GUICtrlSetState($idApply,$GUI_DISABLE)
-          $gPoll=1
+           GetMouseSpeed()
+           GetMouseAccel()
+        If     (                          GUICtrlRead($lSlider)=$Speed   ) _
+           AND (AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)=$Accel[2]) _
+           AND (   _GetNumberFromString(GuiCtrlRead($sThresh2))=$Accel[1]) _
+           AND (   _GetNumberFromString(GuiCtrlRead($sThresh1))=$Accel[0]) Then
+           GUICtrlSetState($idApply,$GUI_DISABLE)
+           $gPoll=1
         EndIf
 
       Case $idApply
         if ( _StringIsNumber(GuiCtrlRead($sThresh1)) + _StringIsNumber(GuiCtrlRead($sThresh2)) ) == 2 Then
-          $gPoll    =  1
-          $Speed    =  GUICtrlRead($lSlider)
-          $Accel[0] = _GetNumberFromString(GuiCtrlRead($sThresh1))
-          $Accel[1] = _GetNumberFromString(GuiCtrlRead($sThresh2))
-          $Accel[2] =  AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
-          SetMouseSpeed()
-          SetMouseAccel()
-          GetMouseSpeed()
-          GetMouseAccel()
-          SetMouseSpeed()
-          SetMouseAccel()
-          CalculateMultiplier()
-          GUICtrlSetData($sMode      ,CalculateMultiplier())
-          GUICtrlSetData($lSlider    ,$Speed   )
-          GUICtrlSetData($sThresh1   ,$Accel[0])
-          GUICtrlSetData($sThresh2   ,$Accel[1])
-          GUICtrlSendMsg($sThresh1,$EM_SETREADONLY,NOT($Accel[2]=2),0)
-          GUICtrlSendMsg($sThresh2,$EM_SETREADONLY,NOT($Accel[2]=2),0)
-          AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
-          GUICtrlSetState($idApply,$GUI_DISABLE)
-        Else
-          MsgBox(0, "Error", "Must be a number")
-        EndIf
+           $gPoll    =  1
+           $Speed    =  GUICtrlRead($lSlider)
+           $Accel[0] = _GetNumberFromString(GuiCtrlRead($sThresh1))
+           $Accel[1] = _GetNumberFromString(GuiCtrlRead($sThresh2))
+           $Accel[2] =  AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
+           SetMouseSpeed()
+           SetMouseAccel()
+           GetMouseSpeed()
+           GetMouseAccel()
+           SetMouseSpeed()
+           SetMouseAccel()
+           CalculateMultiplier()
+           GUICtrlSetData($sMode      ,CalculateMultiplier())
+           GUICtrlSetData($lSlider    ,$Speed   )
+           GUICtrlSetData($sThresh1   ,$Accel[0])
+           GUICtrlSetData($sThresh2   ,$Accel[1])
+           GUICtrlSendMsg($sThresh1,$EM_SETREADONLY,NOT($Accel[2]=2),0)
+           GUICtrlSendMsg($sThresh2,$EM_SETREADONLY,NOT($Accel[2]=2),0)
+           AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
+           GUICtrlSetState($idApply,$GUI_DISABLE)
+         Else
+           MsgBox(0, "Error", "Must be a number")
+         EndIf
 
       Case $idCustomize
-        AutoItSetOption ( "GUICoordMode", 0 )
-        $idGUICustomize = GUICreate("Customize Windows Accel Curve", 513, 242)
-        AutoItSetOption ( "GUICoordMode", 1 )
-        GUISetState(@SW_SHOW   ,$idGUICustomize)
-        GUISetState(@SW_DISABLE,$idGUI)
-        GUISetState(@SW_HIDE   ,$idGUI)
-        CustomizeAccel($idGUICustomize, 513, 242)
-        GUISetState(@SW_SHOW   ,$idGUI)
-        GUISetState(@SW_ENABLE ,$idGUI)
-        GUISetState(@SW_RESTORE,$idGUI)
-        GUIDelete(              $idGUICustomize)
+           AutoItSetOption ( "GUICoordMode", 0 )
+           $idGUICustomize = GUICreate("Customize Windows Accel Curve", 513, 242)
+           AutoItSetOption ( "GUICoordMode", 1 )
+           GUISetState(@SW_SHOW   ,$idGUICustomize)
+           GUISetState(@SW_DISABLE,$idGUI)
+           GUISetState(@SW_HIDE   ,$idGUI)
+           CustomizeAccel($idGUICustomize, 513, 242)
+           GUISetState(@SW_SHOW   ,$idGUI)
+           GUISetState(@SW_ENABLE ,$idGUI)
+           GUISetState(@SW_RESTORE,$idGUI)
+           GUIDelete(              $idGUICustomize)
 
       Case $idInfo
-        MsgBox(0,"About",$appletVersion & "")
+           MsgBox(0,"About",$appletVersion)
     EndSwitch
   WEnd
 EndFunc
