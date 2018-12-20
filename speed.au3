@@ -15,7 +15,7 @@ Global $gCycle = 0
 Global $gPoll = 1
 Global Const $pSpeed = DllStructCreate("uint speed")
 Global Const $pAccel = DllStructCreate("uint thresh1;uint thresh2;uint accel")
-Global Const $appletVersion  = "v1.1"
+Global Const $appletVersion  = "v1.1.0.0"
 
 
 
