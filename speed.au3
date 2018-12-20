@@ -11,20 +11,17 @@
 
 Global $Speed = 0xa
 Global $Accel[3]; = [0x0,0x0,0x0]
-Global $multiplier = ""
-Global $mode = "Pointer Speed:"
-Global $gSlider
+Global $gCycle = 0
+Global $gPoll = 1
 Global Const $pSpeed = DllStructCreate("uint speed")
 Global Const $pAccel = DllStructCreate("uint thresh1;uint thresh2;uint accel")
-Global Const $appletVersion  = "v1.0.1.1"
+Global Const $appletVersion  = "v1.1"
 
-HotKeySet("!{=}","IncrementSens")
-HotKeySet("!{-}","DecrementSens")
-HotKeySet("!{0}","CenterSens")
+
+
 
 GetMouseSpeed()
 GetMouseAccel()
-CalculateMultiplier()
 MakeGUI()
 
 
@@ -44,17 +41,14 @@ Func MakeGUI()
   Local Const $sliderXcoord   = $margin - 6
 
   Local $idGUI       = GUICreate("Pointer Speed Setter", $mainWidth   , $mainHeight)
-  Local $sMode       = GUICtrlCreateLabel($mode                 , $margin      , $modeYcoord)
-                       GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
-  Local $sMultiplier = GUICtrlCreateLabel($multiplier           , $modeXcoord  , $modeYcoord, 26)
-                       GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)
-                       
-  Local $idInfo      = GUICtrlCreateButton("i"         , 0            , 0                     ,  10, 12, $BS_RIGHT)
+  Local $sMode       = GUICtrlCreateLabel(CalculateMultiplier() , $margin      , $modeYcoord, $mainWidth-$margin)
+                       GUICtrlSetBkColor(-1, $GUI_BKCOLOR_TRANSPARENT)                       
+  Local $idInfo      = GUICtrlCreateButton(" i"         , 0            , 0                     ,  13, 13, $BS_LEFT)
   Local $idApply     = GUICtrlCreateButton("Apply"     , $margin-5    , $mainHeight-20-$margin,  70, 25, $BS_DEFPUSHBUTTON)
                        GUICtrlSetState($idApply,$GUI_DISABLE)
   Local $idCustomize = GUICtrlCreateButton("Custom..." , $margin+65   , $mainHeight-20-$margin,  70, 25)
 
-        $gSlider  = MakeMouseSpeedSlider(             $sliderXcoord, $sliderYcoord)  
+  Local $lSlider     = MakeMouseSpeedSlider(             $sliderXcoord, $sliderYcoord)  
 
   GUICtrlCreateLabel("Pointer Accel:"                  , $margin      , $margin+60)
   Local $idRadio0    = GUICtrlCreateRadio("Off"        , $margin      , $margin+75            ,  30, 20)
@@ -68,47 +62,49 @@ Func MakeGUI()
 
 
 
-
   AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
+  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","IncrementSens","!{=}") , "IncrementSens" )
+  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","DecrementSens","!{-}") , "DecrementSens" )
+  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","CenterSens"   ,"!{0}") , "CenterSens"    )
+  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","EnableAccel"  ,"!+{\}"), "EnableAccel"   )
+  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","DisableAccel" ,"!{\}") , "DisableAccel"  )
  
-  Local $lCycle=0
-  Local $lPoll=1
-  Local $lastSliderSpeed=GUICtrlRead($gSlider)
+  Local $lastSliderSpeed=GUICtrlRead($lSlider)
   GUISetState(@SW_SHOW,$idGUI)
   While 1
     Sleep(10)
-       $lCycle+=1
-    If $lCycle>=50 Then       
-       $lCycle=0
+       $gCycle+=1
+    If $gCycle>=50 Then       
+       $gCycle=0
        GetMouseSpeed()
        GetMouseAccel()
-       If (GUICtrlRead($gSlider) <> $Speed)+(AccessAccelRadio($idRadio0,$idRadio1,$idRadio2) <> $Accel[2]) Then
-          If $lPoll Then
-            CalculateMultiplier()
-            GUICtrlSetData($sMode,$mode)
-            GUICtrlSetData($sMultiplier,$multiplier)
+       If (GUICtrlRead($lSlider) <> $Speed)+(AccessAccelRadio($idRadio0,$idRadio1,$idRadio2) <> $Accel[2]) Then
+          If $gPoll Then
+            GUICtrlSetData($sMode,CalculateMultiplier())
             GUICtrlSetData($sThresh1   ,$Accel[0])
             GUICtrlSetData($sThresh2   ,$Accel[1])
             AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
-            GUICtrlSetData($gSlider,$Speed)
+            GUICtrlSetData($lSlider,$Speed)
             $lastSliderSpeed = $Speed
+            GUICtrlSetState($idApply,$GUI_DISABLE)
           Else
             GUICtrlSetState($idApply,$GUI_ENABLE)
           EndIf
        Else
           GUICtrlSetState($idApply,$GUI_DISABLE)
+          $gPoll=1
        EndIf
     EndIf
-    if $lastSliderSpeed - GUICtrlRead($gSlider) Then
-       $lastSliderSpeed = GUICtrlRead($gSlider)
+    if $lastSliderSpeed - GUICtrlRead($lSlider) Then
+       $lastSliderSpeed = GUICtrlRead($lSlider)
        If $lastSliderSpeed == 0 Then
           $lastSliderSpeed = 1
-          GUICtrlSetData($gSlider, $lastSliderSpeed)
+          GUICtrlSetData($lSlider, $lastSliderSpeed)
        EndIf
-       CalculateMultiplier(GUICtrlRead($gSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2))
-       GUICtrlSetData($sMultiplier,$multiplier)
+       GUICtrlSetData($sMode,CalculateMultiplier(GUICtrlRead($lSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)))
        GUICtrlSetState($idApply,$GUI_ENABLE)
-       $lPoll=0
+       $gPoll=0
+       $gCycle=50
     EndIf
 
     Switch  GUIGetMsg()
@@ -116,11 +112,9 @@ Func MakeGUI()
         Exit
       
       Case $idRadio0, $idRadio1, $idRadio2
-        $lPoll=0
+        $gPoll    = 0
         $Accel[2] = AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
-        CalculateMultiplier(GUICtrlRead($gSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2))
-        GUICtrlSetData($sMode,$mode)
-        GUICtrlSetData($sMultiplier,$multiplier)
+        GUICtrlSetData($sMode,CalculateMultiplier(GUICtrlRead($lSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)))
         if $Accel[2] Then
           GUICtrlSetData($sThresh1, 6)
           GUICtrlSetData($sThresh2, 10)
@@ -131,9 +125,9 @@ Func MakeGUI()
         GUICtrlSetState($idApply,$GUI_ENABLE)
 
       Case $idApply
-        $lPoll=1
         if ( _StringIsNumber(GuiCtrlRead($sThresh1)) + _StringIsNumber(GuiCtrlRead($sThresh2)) ) == 2 Then
-          $Speed    =  GUICtrlRead($gSlider)
+          $gPoll    =  1
+          $Speed    =  GUICtrlRead($lSlider)
           $Accel[0] = _GetNumberFromString(GuiCtrlRead($sThresh1))
           $Accel[1] = _GetNumberFromString(GuiCtrlRead($sThresh2))
           $Accel[2] =  AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)
@@ -144,9 +138,8 @@ Func MakeGUI()
           SetMouseSpeed()
           SetMouseAccel()
           CalculateMultiplier()
-          GUICtrlSetData($sMode      ,$mode)
-          GUICtrlSetData($sMultiplier,$multiplier)
-          GUICtrlSetData($gSlider ,$Speed)
+          GUICtrlSetData($sMode      ,CalculateMultiplier())
+          GUICtrlSetData($lSlider ,$Speed)
           GUICtrlSetData($sThresh1   ,$Accel[0])
           GUICtrlSetData($sThresh2   ,$Accel[1])
           AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
@@ -169,7 +162,7 @@ Func MakeGUI()
         GUIDelete(              $idGUICustomize)
 
       Case $idInfo
-        MsgBox(0,"About",$appletVersion)
+        MsgBox(0,"About",$appletVersion & "")
     EndSwitch
   WEnd
 EndFunc
@@ -547,8 +540,10 @@ EndFunc
 Func IncrementSens()
      GetMouseSpeed()
   If $Speed < 20 Then
-     $Speed+= 20
+     $Speed+= 1
      SetMouseSpeed()
+     $gCycle=50
+     $gPoll=1
   EndIf
 EndFunc
 
@@ -557,12 +552,30 @@ Func DecrementSens()
   If $Speed > 1 Then
      $Speed-= 1
      SetMouseSpeed()
+     $gCycle=50
+     $gPoll=1
   EndIf
 EndFunc
 
 Func CenterSens()
      $Speed=10
      SetMouseSpeed()
+     $gCycle=50
+     $gPoll=1
+EndFunc
+
+Func DisableAccel()
+     $Accel[2]=0
+     SetMouseAccel()
+     $gCycle=50
+     $gPoll=1
+EndFunc
+
+Func EnableAccel()
+     $Accel[2]=1
+     SetMouseAccel()
+     $gCycle=50
+     $gPoll=1
 EndFunc
 
 Func GetMouseSpeed()
@@ -681,106 +694,31 @@ EndFunc
 
 
 Func CalculateMultiplier($lMouseSpeed=$Speed,$lAccelMode=$Accel[2])
-
-        $multiplier = "?"
-        $mode = "Pointer Speed:"
-
-    if $lAccelMode Then
-
+    Local $multiplier = "?"
+    Local $mode = "Pointer Speed:"
+    if $lAccelMode  Then
         $mode = "Pointer Acc Multiplier:"
-
-        Switch $lMouseSpeed
-           Case 0 to 1
-                 $multiplier = "0.1"
-           Case 2
-                 $multiplier = "0.2"
-           Case 3
-                 $multiplier = "0.3"
-           Case 4
-                 $multiplier = "0.4"
-           Case 5
-                 $multiplier = "0.5"
-           Case 6
-                 $multiplier = "0.6"
-           Case 7
-                 $multiplier = "0.7"
-           Case 8
-                 $multiplier = "0.8"
-           Case 9
-                 $multiplier = "0.9"
-           Case 10
-                 $multiplier = "1.0"
-           Case 11
-                 $multiplier = "1.1"
-           Case 12
-                 $multiplier = "1.2"
-           Case 13
-                 $multiplier = "1.3"
-           Case 14
-                 $multiplier = "1.4"
-           Case 15
-                 $multiplier = "1.5"
-           Case 16
-                 $multiplier = "1.6"
-           Case 17
-                 $multiplier = "1.7"
-           Case 18
-                 $multiplier = "1.8"
-           Case 19
-                 $multiplier = "1.9"
-           Case 20
-                 $multiplier = "2.0"
-        EndSwitch
-
+        $multiplier = StringFormat("%.1f",$lMouseSpeed/10)
     Else
-
         $mode = "Pointer Speed Factor:"
-
         Switch $lMouseSpeed
            Case 0 to 1
                  $multiplier = "1/32"
            Case 2
                  $multiplier = "1/16"
-           Case 3
-                 $multiplier = "1/8"
-           Case 4
-                 $multiplier = "2/8"
-           Case 5
-                 $multiplier = "3/8"
-           Case 6
-                 $multiplier = "4/8"
-           Case 7
-                 $multiplier = "5/8"
-           Case 8
-                 $multiplier = "6/8"
-           Case 9
-                 $multiplier = "7/8"
-           Case 10
-                 $multiplier = "1"
-           Case 11
-                 $multiplier = "1 1/4"
-           Case 12
-                 $multiplier = "1 2/4"
-           Case 13
-                 $multiplier = "1 3/4"
-           Case 14
-                 $multiplier = "2"
-           Case 15
-                 $multiplier = "2 1/4"
-           Case 16
-                 $multiplier = "2 2/4"
-           Case 17
-                 $multiplier = "2 3/4"
-           Case 18
-                 $multiplier = "3"
-           Case 19
-                 $multiplier = "3 1/4"
-           Case 20
-                 $multiplier = "3 2/4"
+           Case 3 to 9
+                 $multiplier = String($lMouseSpeed-2)&"/8"
+           Case 10, 14, 18
+                 $multiplier = String($lMouseSpeed/4-1.5)
+           Case 11 to 13
+                 $multiplier = "1 "&String($lMouseSpeed-10)&"/4"
+           Case 15 to 17
+                 $multiplier = "2 "&String($lMouseSpeed-14)&"/4"
+           Case 19 to 20
+                 $multiplier = "3 "&String($lMouseSpeed-18)&"/4"
         EndSwitch
-
     EndIf
-
+    return $mode&" "&$multiplier
 EndFunc
 
  
