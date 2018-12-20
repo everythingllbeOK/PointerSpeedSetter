@@ -79,7 +79,7 @@ Func MakeGUI()
   While 1
     Sleep(10)
        $gCycle+=1
-    If $gCycle>=50 Then       
+    If $gCycle>=25 Then       
        $gCycle=0
        GetMouseSpeed()
        GetMouseAccel()
