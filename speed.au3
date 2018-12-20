@@ -1,5 +1,6 @@
 #NoTrayIcon
 #include <Misc.au3>
+#include <GUIConstants.au3>
 #include <GUIConstantsEx.au3>
 #include <ColorConstants.au3>
 #include <StaticConstants.au3>
@@ -58,7 +59,9 @@ Func MakeGUI()
   GUICtrlCreateLabel("Threshold 1 (2x)"                , $margin+45   , $margin+139)
   GUICtrlCreateLabel("Threshold 2 (4x)"                , $margin+45   , $margin+159)
   Local $sThresh1    = GUICtrlCreateInput($Accel[0]    , $margin+15   , $margin+137           ,  25, 20)
+                       GUICtrlSendMsg($sThresh1,$EM_SETREADONLY,NOT($Accel[2]=2),0)
   Local $sThresh2    = GUICtrlCreateInput($Accel[1]    , $margin+15   , $margin+157           ,  25, 20)
+                       GUICtrlSendMsg($sThresh2,$EM_SETREADONLY,NOT($Accel[2]=2),0)
 
 
 
@@ -80,7 +83,7 @@ Func MakeGUI()
        $gCycle=0
        GetMouseSpeed()
        GetMouseAccel()
-       If (GUICtrlRead($lSlider) <> $Speed)+($lastAccelRadio <> $Accel[2]) Then
+       If ($lastSliderSpeed <> $Speed)+($lastAccelRadio <> $Accel[2]) Then
           If $gPoll Then
             GUICtrlSetData($sMode,CalculateMultiplier())
             GUICtrlSetData($sThresh1   ,$Accel[0])
@@ -88,7 +91,10 @@ Func MakeGUI()
             AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
             GUICtrlSetData($lSlider,$Speed)
             $lastSliderSpeed = $Speed
+            $lastAccelRadio  = $Accel[2]
             GUICtrlSetState($idApply,$GUI_DISABLE)
+            GUICtrlSendMsg($sThresh1,$EM_SETREADONLY,NOT($Accel[2]=2),0)
+            GUICtrlSendMsg($sThresh2,$EM_SETREADONLY,NOT($Accel[2]=2),0)
           EndIf
        EndIf
     EndIf
@@ -119,6 +125,8 @@ Func MakeGUI()
              GUICtrlSetData($sThresh1, 0)
              GUICtrlSetData($sThresh2, 0)
            EndIf
+           GUICtrlSendMsg($sThresh1,$EM_SETREADONLY,NOT($lastAccelRadio=2),0)
+           GUICtrlSendMsg($sThresh2,$EM_SETREADONLY,NOT($lastAccelRadio=2),0)
         EndIf
         GetMouseSpeed()
         GetMouseAccel()
@@ -150,6 +158,8 @@ Func MakeGUI()
           GUICtrlSetData($lSlider    ,$Speed   )
           GUICtrlSetData($sThresh1   ,$Accel[0])
           GUICtrlSetData($sThresh2   ,$Accel[1])
+          GUICtrlSendMsg($sThresh1,$EM_SETREADONLY,NOT($Accel[2]=2),0)
+          GUICtrlSendMsg($sThresh2,$EM_SETREADONLY,NOT($Accel[2]=2),0)
           AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
           GUICtrlSetState($idApply,$GUI_DISABLE)
         Else
