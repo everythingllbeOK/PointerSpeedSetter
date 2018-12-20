@@ -8,5 +8,5 @@ Merely a wrapper for calling the SystemParametersInfo function for SPI_SETMOUSES
 
 The linearization also compensates for Window's 16.16 fixed point binary truncation errors (MarkC fix).
 
-![Screenshot 4](https://i.redd.it/umgu149i38411.png)![Screenshot 2](https://i.redd.it/idfjfaij38411.png)
+![Screenshot 4](https://i.redd.it/qol6i7ytue521.png)![Screenshot 2](https://i.redd.it/2nai520vue521.png)
 
