@@ -87,29 +87,32 @@ Func MakeGUI()
             GUICtrlSetData($lSlider,$Speed)
             $lastSliderSpeed = $Speed
             GUICtrlSetState($idApply,$GUI_DISABLE)
-          Else
-            GUICtrlSetState($idApply,$GUI_ENABLE)
           EndIf
-       Else
-          GUICtrlSetState($idApply,$GUI_DISABLE)
-          $gPoll=1
        EndIf
     EndIf
-    if $lastSliderSpeed - GUICtrlRead($lSlider) Then
+    If $lastSliderSpeed - GUICtrlRead($lSlider) Then
        $lastSliderSpeed = GUICtrlRead($lSlider)
        If $lastSliderSpeed == 0 Then
           $lastSliderSpeed = 1
           GUICtrlSetData($lSlider, $lastSliderSpeed)
        EndIf
        GUICtrlSetData($sMode,CalculateMultiplier(GUICtrlRead($lSlider),AccessAccelRadio($idRadio0,$idRadio1,$idRadio2)))
-       GUICtrlSetState($idApply,$GUI_ENABLE)
        $gPoll=0
-       $gCycle=50
     EndIf
 
     Switch  GUIGetMsg()
       Case $GUI_EVENT_CLOSE
         Exit
+        
+      Case $lSlider
+        GetMouseSpeed()
+        GetMouseAccel()
+        If (GUICtrlRead($lSlider) <> $Speed)+(AccessAccelRadio($idRadio0,$idRadio1,$idRadio2) <> $Accel[2]) Then
+          GUICtrlSetState($idApply,$GUI_ENABLE)
+        Else
+          GUICtrlSetState($idApply,$GUI_DISABLE)
+          $gPoll=1
+        EndIf
       
       Case $idRadio0, $idRadio1, $idRadio2
         $gPoll    = 0
@@ -139,7 +142,7 @@ Func MakeGUI()
           SetMouseAccel()
           CalculateMultiplier()
           GUICtrlSetData($sMode      ,CalculateMultiplier())
-          GUICtrlSetData($lSlider ,$Speed)
+          GUICtrlSetData($lSlider    ,$Speed   )
           GUICtrlSetData($sThresh1   ,$Accel[0])
           GUICtrlSetData($sThresh2   ,$Accel[1])
           AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
