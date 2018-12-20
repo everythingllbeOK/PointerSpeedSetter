@@ -63,11 +63,11 @@ Func MakeGUI()
 
 
   AccessAccelRadio($idRadio0,$idRadio1,$idRadio2,"set")
-  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","IncrementSens","!{=}") , "IncrementSens" )
-  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","DecrementSens","!{-}") , "DecrementSens" )
-  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","CenterSens"   ,"!{0}") , "CenterSens"    )
-  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","EnableAccel"  ,"!+{\}"), "EnableAccel"   )
-  HotKeySet( IniRead("bin\hotkey.ini","Hotkeys","DisableAccel" ,"!{\}") , "DisableAccel"  )
+  HotKeySet( IniRead("hotkey.ini","Hotkeys","IncrementSens","!{=}") , "IncrementSens" )
+  HotKeySet( IniRead("hotkey.ini","Hotkeys","DecrementSens","!{-}") , "DecrementSens" )
+  HotKeySet( IniRead("hotkey.ini","Hotkeys","CenterSens"   ,"!{0}") , "CenterSens"    )
+  HotKeySet( IniRead("hotkey.ini","Hotkeys","EnableAccel"  ,"!+{\}"), "EnableAccel"   )
+  HotKeySet( IniRead("hotkey.ini","Hotkeys","DisableAccel" ,"!{\}") , "DisableAccel"  )
  
   Local $lastSliderSpeed=GUICtrlRead($lSlider)
   GUISetState(@SW_SHOW,$idGUI)
